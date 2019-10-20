@@ -8,14 +8,24 @@
     <Authors>Wesley Harris</Authors>
     <Company>Windup Button</Company>
     <Product />
-    <Copyright>Windup Button</Copyright>
+    <Copyright>Copyright © 2019  Windup Button</Copyright>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
 
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
 
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageLicenseFile></PackageLicenseFile>
+
+    <PackageProjectUrl>https://github.com/windupbutton/roscoe</PackageProjectUrl>
+
+    <RepositoryUrl>https://github.com/windupbutton/roscoe</RepositoryUrl>
+
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+
+    <Description>Roscoe is a strongly-typed fluent interface for SQL Server</Description>
+
+    <PackageTags>SQL, ORM, DSL, Fluent</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,10 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
     <None Include="..\WindupButton.Roscoe.licenseheader" Link="WindupButton.Roscoe.licenseheader" />
   </ItemGroup>
 
