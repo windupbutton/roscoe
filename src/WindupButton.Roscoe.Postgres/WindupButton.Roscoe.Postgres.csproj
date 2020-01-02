@@ -25,6 +25,8 @@
     <Description>Roscoe is a strongly-typed fluent interface for Postgres</Description>
 
     <PackageTags>SQL, ORM, DSL, Fluent</PackageTags>
+
+    <Version>0.2.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
