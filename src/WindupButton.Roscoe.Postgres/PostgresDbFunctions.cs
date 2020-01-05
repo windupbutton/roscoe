@@ -430,5 +430,25 @@ namespace WindupButton.Roscoe.Postgres
 
             return new DbByteArrayFunctionValue("encode", new IDbFragment[] { dbByteArray, formatString.DbValue() });
         }
+
+        public static DbString Sha256(this DbByteArray dbByteArray)
+        {
+            return new DbStringFunctionValue("sha256", new IDbFragment[] { dbByteArray });
+        }
+
+        public static DbString MD5(this DbByteArray dbByteArray)
+        {
+            return new DbStringFunctionValue("md5", new IDbFragment[] { dbByteArray });
+        }
+
+        public static DbString Sha256(this DbString dbByteArray)
+        {
+            return new DbStringFunctionValue("sha256", new IDbFragment[] { dbByteArray });
+        }
+
+        public static DbString MD5(this DbString dbByteArray)
+        {
+            return new DbStringFunctionValue("md5", new IDbFragment[] { dbByteArray });
+        }
     }
 }
