@@ -13,36 +13,36 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using WindupButton.Roscoe.Infrastructure;
-using WindupButton.Roscoe.Options;
-using WindupButton.Roscoe.Schema;
 
 namespace WindupButton.Roscoe.Expressions
 {
-    public abstract class DeleteClause : IDbFragment
+    public class DbLongCaseFunctionValue : DbLong, ICaseFunction
     {
-        public Table? Table { get; set; }
+        private readonly List<(DbBool, IDbFragment)> cases;
 
-        protected abstract void ConfigureAlias(AliasOption option);
-
-        public void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
+        public DbLongCaseFunctionValue()
         {
-            if (Table != null)
+            cases = new List<(DbBool, IDbFragment)>();
+        }
+
+        public void Add(DbBool when, IDbFragment then)
+        {
+            cases.Add((when, then));
+        }
+
+        public override void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
+        {
+            var caseFunction = serviceProvider.GetRequiredService<CaseFunction>();
+
+            foreach (var (when, then) in cases)
             {
-                builder.SqlBuilder.Write("delete from ");
-
-                var aliasOption = serviceProvider.GetRequiredService<AliasOption>();
-                var oldAliasOption = aliasOption.Clone();
-
-                ConfigureAlias(aliasOption);
-
-                Table.Build(builder, serviceProvider);
-
-                builder.SqlBuilder.WriteLine();
-
-                aliasOption.Restore(oldAliasOption);
+                caseFunction.Add(when, then);
             }
+
+            caseFunction.Build(builder, serviceProvider);
         }
     }
 }

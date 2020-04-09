@@ -26,6 +26,8 @@
     <Description>Roscoe is a strongly-typed fluent interface for SQL Server</Description>
 
     <PackageTags>SQL, ORM, DSL, Fluent</PackageTags>
+
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

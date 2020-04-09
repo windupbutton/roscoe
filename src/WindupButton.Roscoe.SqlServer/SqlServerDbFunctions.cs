@@ -1,11 +1,11 @@
 ﻿// Copyright 2019 Windup Button
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -166,5 +166,29 @@ namespace WindupButton.Roscoe.SqlServer
         {
             return new DbByteArrayCastFunction(dbFragment, columnType);
         }
+
+        public static DbString Right(this DbFunctions dbFunctions, DbString dbString, DbInt length)
+            => new DbStringFunctionValue("right", new IDbFragment[] { dbString, length });
+
+        public static DbString Right(this DbFunctions dbFunctions, DbString dbString, int length)
+            => new DbStringFunctionValue("right", new IDbFragment[] { dbString, length.DbValue() });
+
+        public static DbInt IIf(this DbFunctions dbFunctions, DbBool condition, DbInt trueValue, DbInt falseValue)
+            => new DbIntFunctionValue("iif", new IDbFragment[] { condition, trueValue, falseValue });
+
+        public static DbString IIf(this DbFunctions dbFunctions, DbBool condition, DbString trueValue, DbString falseValue)
+            => new DbStringFunctionValue("iif", new IDbFragment[] { condition, trueValue, falseValue });
+
+        public static DbDecimal IIf(this DbFunctions dbFunctions, DbBool condition, DbDecimal trueValue, DbDecimal falseValue)
+            => new DbDecimalFunctionValue("iif", new IDbFragment[] { condition, trueValue, falseValue });
+
+        public static DbBool IIf(this DbFunctions dbFunctions, DbBool condition, DbBool trueValue, DbBool falseValue)
+            => new DbBoolFunctionValue("iif", new IDbFragment[] { condition, trueValue, falseValue });
+
+        public static DbInt Len(this DbFunctions dbFunctions, DbString dbString)
+            => new DbIntFunctionValue("len", new[] { dbString });
+
+        public static DbString Replicate(this DbFunctions dbFunctions, DbString dbString, DbInt length)
+            => new DbStringFunctionValue("replicate", new IDbFragment[] { dbString, length });
     }
 }

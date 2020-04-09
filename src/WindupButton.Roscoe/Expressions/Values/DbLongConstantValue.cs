@@ -17,29 +17,18 @@ using WindupButton.Roscoe.Infrastructure;
 
 namespace WindupButton.Roscoe.Expressions
 {
-    public class AliasedDbValue : IDbFragment, IAliasedDbValue
+    public sealed class DbLongConstantValue : DbLong, IConstantValue
     {
-        private readonly IDbFragment value;
-
-        public AliasedDbValue(IDbFragment value, string? alias = null)
+        public DbLongConstantValue(object? value)
         {
-            Check.IsNotNull(value, nameof(value));
-
-            this.value = value;
-            Alias = alias;
+            Value = value;
         }
 
-        public string? Alias { get; set; }
+        public object? Value { get; }
 
-        public void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
+        public override void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
         {
-            value.Build(builder, serviceProvider);
-
-            if (Alias != null)
-            {
-                builder.SqlBuilder.Write(" as ");
-                builder.SqlBuilder.Write(Alias);
-            }
+            new ConstantValue(Value).Build(builder, serviceProvider);
         }
     }
 }

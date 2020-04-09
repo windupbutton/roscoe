@@ -13,33 +13,29 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using WindupButton.Roscoe.Infrastructure;
 
 namespace WindupButton.Roscoe.Expressions
 {
-    public class AliasedDbValue : IDbFragment, IAliasedDbValue
+    public sealed class DbLongFunctionValue : DbLong
     {
-        private readonly IDbFragment value;
+        private readonly string functionName;
+        private readonly List<IDbFragment> arguments;
 
-        public AliasedDbValue(IDbFragment value, string? alias = null)
+        public DbLongFunctionValue(string functionName, IEnumerable<IDbFragment> arguments)
         {
-            Check.IsNotNull(value, nameof(value));
+            Check.IsNotNull(functionName, nameof(functionName));
+            Check.IsNotNull(arguments, nameof(arguments));
 
-            this.value = value;
-            Alias = alias;
+            this.functionName = functionName;
+            this.arguments = arguments.ToList();
         }
 
-        public string? Alias { get; set; }
-
-        public void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
+        public override void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
         {
-            value.Build(builder, serviceProvider);
-
-            if (Alias != null)
-            {
-                builder.SqlBuilder.Write(" as ");
-                builder.SqlBuilder.Write(Alias);
-            }
+            DbFunction.Build(functionName, arguments, builder, serviceProvider);
         }
     }
 }

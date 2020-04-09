@@ -17,29 +17,26 @@ using WindupButton.Roscoe.Infrastructure;
 
 namespace WindupButton.Roscoe.Expressions
 {
-    public class AliasedDbValue : IDbFragment, IAliasedDbValue
+    public sealed class DbLongBinaryOperator : DbLong
     {
-        private readonly IDbFragment value;
+        private readonly IDbFragment lhs;
+        private readonly string op;
+        private readonly IDbFragment rhs;
 
-        public AliasedDbValue(IDbFragment value, string? alias = null)
+        public DbLongBinaryOperator(IDbFragment lhs, string op, IDbFragment rhs)
         {
-            Check.IsNotNull(value, nameof(value));
+            Check.IsNotNull(lhs, nameof(lhs));
+            Check.IsNotNull(op, nameof(op));
+            Check.IsNotNull(rhs, nameof(rhs));
 
-            this.value = value;
-            Alias = alias;
+            this.lhs = lhs;
+            this.op = op;
+            this.rhs = rhs;
         }
 
-        public string? Alias { get; set; }
-
-        public void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
+        public override void Build(DbCommandBuilder builder, IServiceProvider serviceProvider)
         {
-            value.Build(builder, serviceProvider);
-
-            if (Alias != null)
-            {
-                builder.SqlBuilder.Write(" as ");
-                builder.SqlBuilder.Write(Alias);
-            }
+            BinaryOperator.Build(lhs, op, rhs, builder, serviceProvider);
         }
     }
 }
