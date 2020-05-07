@@ -1,11 +1,11 @@
 ﻿// Copyright 2019 Windup Button
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -39,6 +40,20 @@ namespace WindupButton.Roscoe
         public IServiceProvider ServiceProvider { get; }
         public DbFunctions Functions => new DbFunctions();
 
+        public async Task<IEnumerable<DbCommandResult>> ExecuteAsync(string sql, DbParameter[] dbParameters, CancellationToken token = default)
+        {
+            // todo: allow "features" to modify command, reader, etc.
+
+            using var connection = await connectionFactory.GetConnectionAsync(token);
+            // todo: allow caching of (prepared) commands
+            using var command = connection.CreateCommand();
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(dbParameters);
+
+            return await ExecuteAsync(10, command, token);
+        }
+
         public async Task<IEnumerable<DbCommandResult>> ExecuteAsync(CancellationToken token = default, params IRoscoeCommand[] commands)
         {
             Check.IsNotNull(commands, nameof(commands));
@@ -50,105 +65,107 @@ namespace WindupButton.Roscoe
 
             // todo: allow "features" to modify command, reader, etc.
 
-            using (var connection = await connectionFactory.GetConnectionAsync(token))
+            using var connection = await connectionFactory.GetConnectionAsync(token);
+            // todo: allow caching of (prepared) commands
+            using var command = connection.CreateCommand();
+
+            var sqlBuilder = new StringBuilder();
+            var commandIndex = 1;
+            var parameterFactory = ServiceProvider.GetRequiredService<IParameterFactory>();
+            var terminator = ServiceProvider.GetRequiredService<StatementTerminator>();
+
+            foreach (var roscoeCommand in commands)
             {
-                // todo: allow caching of (prepared) commands
-                using (var command = connection.CreateCommand())
+                sqlBuilder.Append("-- Command ");
+                sqlBuilder.Append(commandIndex++);
+                sqlBuilder.Append(":");
+                sqlBuilder.Append(Environment.NewLine);
+                sqlBuilder.Append(Environment.NewLine);
+
+                var dbCommand = roscoeCommand.Build(parameterFactory);
+
+                sqlBuilder.Append(dbCommand.Sql);
+                sqlBuilder.Append(terminator.Terminator);
+                sqlBuilder.Append(Environment.NewLine);
+                sqlBuilder.Append(Environment.NewLine);
+                sqlBuilder.Append(Environment.NewLine);
+
+                command.Parameters.AddRange(dbCommand.Parameters.ToArray());
+            }
+
+            command.CommandText = sqlBuilder.ToString();
+
+            return await ExecuteAsync(commands.Length, command, token);
+        }
+
+        private async Task<IEnumerable<DbCommandResult>> ExecuteAsync(int commandCount, DbCommand command, CancellationToken token)
+        {
+            foreach (var hook in ServiceProvider.GetServices<IBeforeExecuteCommandHook>())
+            {
+                hook.HandleDbCommand(command);
+            }
+
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            try
+            {
+                using (var reader = await command.ExecuteReaderAsync(token))
                 {
-                    var sqlBuilder = new StringBuilder();
-                    var commandIndex = 1;
-                    var parameterFactory = ServiceProvider.GetRequiredService<IParameterFactory>();
-                    var terminator = ServiceProvider.GetRequiredService<StatementTerminator>();
+                    // read data from result set
 
-                    foreach (var roscoeCommand in commands)
+                    var dataset = new List<DbCommandResult>(commandCount);
+
+                    for (; ; )
                     {
-                        sqlBuilder.Append("-- Command ");
-                        sqlBuilder.Append(commandIndex++);
-                        sqlBuilder.Append(":");
-                        sqlBuilder.Append(Environment.NewLine);
-                        sqlBuilder.Append(Environment.NewLine);
+                        var columnNames = new List<string>();
+                        var resultset = new List<Dictionary<string, object?>>();
 
-                        var dbCommand = roscoeCommand.Build(parameterFactory);
-
-                        sqlBuilder.Append(dbCommand.Sql);
-                        sqlBuilder.Append(terminator.Terminator);
-                        sqlBuilder.Append(Environment.NewLine);
-                        sqlBuilder.Append(Environment.NewLine);
-                        sqlBuilder.Append(Environment.NewLine);
-
-                        command.Parameters.AddRange(dbCommand.Parameters.ToArray());
-                    }
-
-                    command.CommandText = sqlBuilder.ToString();
-
-                    foreach (var hook in ServiceProvider.GetServices<IBeforeExecuteCommandHook>())
-                    {
-                        hook.HandleDbCommand(command);
-                    }
-
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-
-                    try
-                    {
-                        using (var reader = await command.ExecuteReaderAsync(token))
+                        for (; await reader.ReadAsync(token);)
                         {
-                            // read data from result set
+                            // grab column names
 
-                            var dataset = new List<DbCommandResult>(commands.Length);
-
-                            for (; ; )
+                            if (columnNames.Count == 0)
                             {
-                                var columnNames = new List<string>();
-                                var resultset = new List<Dictionary<string, object>>();
-
-                                for (; await reader.ReadAsync(token);)
+                                for (var i = 0; i < reader.FieldCount; ++i)
                                 {
-                                    // grab column names
-
-                                    if (columnNames.Count == 0)
-                                    {
-                                        for (var i = 0; i < reader.FieldCount; ++i)
-                                        {
-                                            columnNames.Add(reader.GetName(i));
-                                        }
-                                    }
-
-                                    var row = new Dictionary<string, object>(columnNames.Count);
-
-                                    for (var i = 0; i < reader.FieldCount; ++i)
-                                    {
-                                        // todo: benchmark against reader.GetValues();
-                                        var value = reader.GetValue(i);
-
-                                        row.Add(columnNames[i], value == DBNull.Value ? null : value);
-                                    }
-
-                                    resultset.Add(row);
-                                }
-
-                                dataset.Add(new DbCommandResult(resultset, resultset.Count));
-
-                                // next result set
-
-                                if (!await reader.NextResultAsync(token))
-                                {
-                                    break;
+                                    columnNames.Add(reader.GetName(i));
                                 }
                             }
 
-                            return dataset;
-                        }
-                    }
-                    finally
-                    {
-                        stopwatch.Stop();
+                            var row = new Dictionary<string, object?>(columnNames.Count);
 
-                        foreach (var hook in ServiceProvider.GetServices<IAfterExecuteCommandHook>())
+                            for (var i = 0; i < reader.FieldCount; ++i)
+                            {
+                                // todo: benchmark against reader.GetValues();
+                                var value = reader.GetValue(i);
+
+                                row.Add(columnNames[i], value == DBNull.Value ? null : value);
+                            }
+
+                            resultset.Add(row);
+                        }
+
+                        dataset.Add(new DbCommandResult(resultset, resultset.Count));
+
+                        // next result set
+
+                        if (!await reader.NextResultAsync(token))
                         {
-                            hook.HandleDbCommand(command, stopwatch.Elapsed);
+                            break;
                         }
                     }
+
+                    return dataset;
+                }
+            }
+            finally
+            {
+                stopwatch.Stop();
+
+                foreach (var hook in ServiceProvider.GetServices<IAfterExecuteCommandHook>())
+                {
+                    hook.HandleDbCommand(command, stopwatch.Elapsed);
                 }
             }
         }
