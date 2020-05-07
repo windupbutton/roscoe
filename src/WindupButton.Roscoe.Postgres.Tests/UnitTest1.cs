@@ -1,11 +1,11 @@
 // Copyright 2019 Windup Button
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -141,7 +141,8 @@ namespace WindupButton.Roscoe.Postgres.Tests
                 var query = db.InsertValues(organisations, new { organisations.Id, organisations.Name })
                     .Values(new { Id = Guid.NewGuid().DbValue(), Name = "org 1".DbValue() })
                     .OnConflict(organisations.Id, organisations.Name)
-                    .DoNothing()
+                    //.DoNothing()
+                    .Update(x => x.Set(organisations.Name, "org 1".DbValue()))
                     .Returning(() => new
                     {
                         Id = organisations.Id.Value(),
