@@ -190,5 +190,8 @@ namespace WindupButton.Roscoe.SqlServer
 
         public static DbString Replicate(this DbFunctions dbFunctions, DbString dbString, DbInt length)
             => new DbStringFunctionValue("replicate", new IDbFragment[] { dbString, length });
+
+        public static DbString Format(this DbFunctions dbFunctions, DbDateTime date, string format)
+            => new DbStringFunctionValue("format", new IDbFragment[] { date, format.DbValue() });
     }
 }
